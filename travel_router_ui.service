@@ -1,0 +1,17 @@
+[Unit]
+Description=Travel Router Web UI
+After=network.target NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=simple
+User=travel-host
+WorkingDirectory=/home/travel-host/wifi-ui
+ExecStart=/home/travel-host/wifi-ui/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+Environment=WIFI_UI_TOKEN=changeme
+
+[Install]
+WantedBy=multi-user.target

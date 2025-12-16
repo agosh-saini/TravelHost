@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Travel Router</title>
+</head>
+<body>
+<h1>Travel Router</h1>
+<div id="status">Loading...</div>
+<ul id="nets"></ul>
+
+<script>
+const TOKEN = "changeme";
+
+function refresh() {
+  fetch(`/api/status?token=${TOKEN}`)
+    .then(r => r.json())
+    .then(s => {
+      document.getElementById("status").innerText =
+        s.ip ? "Connected: " + s.ip : "Not connected";
+    });
+
+  fetch(`/api/networks?token=${TOKEN}`)
+    .then(r => r.json())
+    .then(nets => {
+      const ul = document.getElementById("nets");
+      ul.innerHTML = "";
+      nets.forEach(n => {
+        const li = document.createElement("li");
+        li.textContent = n.ssid + " (" + n.signal + "%)";
+        li.onclick = () => {
+          let pw = "";
+          if (n.security && n.security !== "--") {
+            pw = prompt("Password:");
+          }
+          fetch(`/api/connect?token=${TOKEN}&ssid=${encodeURIComponent(n.ssid)}&password=${encodeURIComponent(pw)}`, {method:"POST"})
+            .then(() => setTimeout(refresh, 3000));
+        };
+        ul.appendChild(li);
+      });
+    });
+}
+
+refresh();
+</script>
+</body>
+</html>

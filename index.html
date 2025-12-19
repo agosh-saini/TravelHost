@@ -1,46 +1,200 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Travel Router</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      margin: 0;
+      padding: 1.5rem;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.5rem;
+    }
+
+    #status {
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border-radius: 6px;
+      background: #1e293b;
+      font-size: 0.9rem;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      padding: 0.75rem;
+      border-bottom: 1px solid #334155;
+      cursor: pointer;
+    }
+
+    li:hover {
+      background: #1e293b;
+    }
+
+    li.connected {
+      font-weight: bold;
+      color: #22c55e;
+    }
+
+    .signal {
+      float: right;
+      opacity: 0.8;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.5rem;
+    }
+  </style>
 </head>
 <body>
-<h1>Travel Router</h1>
-<div id="status">Loading...</div>
-<ul id="nets"></ul>
+
+  <h1>Travel Router</h1>
+
+  <div id="status">Checking status…</div>
+
+  <div id="captive" style="display:none; margin-bottom:1rem;">
+    <button onclick="openPortal()">Login to Wi-Fi</button>
+  </div>
+
+  <ul id="networks"></ul>
+
+  <div class="hint">
+    Click a network to connect.
+    Bold = currently connected.
+  </div>
 
 <script>
-const TOKEN = "changeme";
+/* ==============================
+ CONFIG
+ ============================== */
+const TOKEN = "changeme";   // must match WIFI_UI_TOKEN
 
-function refresh() {
+/* ==============================
+ STATUS
+ ============================== */
+function refreshStatus() {
   fetch(`/api/status?token=${TOKEN}`)
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) throw new Error();
+      return r.json();
+    })
     .then(s => {
-      document.getElementById("status").innerText =
-        s.ip ? "Connected: " + s.ip : "Not connected";
+      const el = document.getElementById("status");
+      if (s.ip) {
+        el.textContent = `Upstream connected via wlan1 (${s.ip})`;
+        el.style.background = "#064e3b";
+      } else {
+        el.textContent = "Upstream not connected";
+        el.style.background = "#7c2d12";
+      }
+    })
+    .catch(() => {
+      document.getElementById("status").textContent = "Status unavailable";
     });
+}
 
+/* ==============================
+ NETWORK LIST
+ ============================== */
+function loadNetworks() {
   fetch(`/api/networks?token=${TOKEN}`)
     .then(r => r.json())
     .then(nets => {
-      const ul = document.getElementById("nets");
+      const ul = document.getElementById("networks");
       ul.innerHTML = "";
+
       nets.forEach(n => {
         const li = document.createElement("li");
-        li.textContent = n.ssid + " (" + n.signal + "%)";
+        li.textContent = n.ssid || "(hidden network)";
+        li.className = n.connected ? "connected" : "";
+
+        const sig = document.createElement("span");
+        sig.className = "signal";
+        sig.textContent = `${n.signal}%`;
+        li.appendChild(sig);
+
         li.onclick = () => {
-          let pw = "";
+          if (n.connected) return;
+
+          let password = "";
           if (n.security && n.security !== "--") {
-            pw = prompt("Password:");
+            password = prompt(`Password for ${n.ssid}`);
+            if (password === null) return;
           }
-          fetch(`/api/connect?token=${TOKEN}&ssid=${encodeURIComponent(n.ssid)}&password=${encodeURIComponent(pw)}`, {method:"POST"})
-            .then(() => setTimeout(refresh, 3000));
+
+          li.textContent = "Connecting…";
+
+          fetch(
+            `/api/connect?token=${TOKEN}&ssid=${encodeURIComponent(n.ssid)}&password=${encodeURIComponent(password)}`,
+            { method: "POST" }
+          )
+          .then(r => r.json())
+          .then(res => {
+            if (res.status !== "ok") {
+              alert("Failed to connect:\n" + res.output);
+            }
+            setTimeout(() => {
+              refreshStatus();
+              loadNetworks();
+            }, 3000);
+          });
         };
+
         ul.appendChild(li);
       });
     });
 }
 
-refresh();
+  
+/* ==============================
+ CAPTIVE PORTAL
+ ============================== */
+
+function checkCaptive() {
+  fetch(`/api/captive?token=${TOKEN}`)
+    .then(r => r.json())
+    .then(c => {
+      const el = document.getElementById("captive");
+      if (c.captive) {
+        el.style.display = "block";
+      } else {
+        el.style.display = "none";
+      }
+    });
+}
+
+function openPortal() {
+  // Standard trick: triggers captive redirect
+  window.open("http://neverssl.com", "_blank");
+}
+
+
+/* ==============================
+ INIT
+ ============================== */
+refreshStatus();
+loadNetworks();
+setInterval(refreshStatus, 5000);
+
+checkCaptive();
+setInterval(checkCaptive, 5000);
+
 </script>
+
 </body>
 </html>
+

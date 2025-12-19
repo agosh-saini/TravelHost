@@ -15,7 +15,7 @@ dynamic upstream Wi-Fi switching (wlan1) via a local web UI.
 
 ## Usage
 1. Connect to Wi-Fi `travel-host`
-2. Open http://<PI_IP>:8000 (PI_IP can be found by typing hostname -I in Pi terminal)
+2. Open http://<PI_IP>:8000 ot http://travel-host.local:3000 (PI_IP can be found by typing hostname -I in Pi terminal)
 3. Select upstream Wi-Fi
 4. Login to captive portal if required
 

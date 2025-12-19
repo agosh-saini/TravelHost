@@ -82,33 +82,34 @@ def connect(
     password: str = Query("")
 ):
     require_token(request)
+
     if not ssid:
-        return {"status": "error", "msg": "SSID required"}
+        raise HTTPException(status_code=400, detail="SSID required")
 
     try:
-        # 1. Disconnect wlan1
+        # 0. Ensure wlan1 is managed
+        run("nmcli device set wlan1 managed yes")
+
+        # 1. Hard disconnect
         run("nmcli device disconnect wlan1 || true")
 
-        # 2. Delete any existing connections bound to wlan1
+        # 2. Remove stale temp connections (defensive)
         conns = run("nmcli -t -f NAME,DEVICE connection show").splitlines()
         for c in conns:
             name, dev = c.split(":")
-            if dev == "wlan1":
+            if dev == "wlan1" or name == "temp-wifi":
                 run(f'nmcli connection delete "{name}"')
 
-        # 3. Create fresh temporary connection
+        # 3. Connect NON-INTERACTIVELY (KEY FIX)
         if password:
-            run(
-                f'nmcli connection add type wifi ifname wlan1 con-name temp-wifi ssid "{ssid}" '
-                f'wifi-sec.key-mgmt wpa-psk wifi-sec.psk "{password}"'
+            out = run(
+                f'nmcli device wifi connect "{ssid}" '
+                f'password "{password}" ifname wlan1'
             )
         else:
-            run(
-                f'nmcli connection add type wifi ifname wlan1 con-name temp-wifi ssid "{ssid}"'
+            out = run(
+                f'nmcli device wifi connect "{ssid}" ifname wlan1'
             )
-
-        # 4. Bring it up
-        out = run("nmcli connection up temp-wifi")
 
         return {
             "status": "ok",
@@ -120,6 +121,7 @@ def connect(
             "status": "error",
             "output": e.output
         }
+
 
 # ------------------------
 # Captive Portal

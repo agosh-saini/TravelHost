@@ -66,15 +66,17 @@
 
   <div id="status">Checking status…</div>
 
+  <button id="disconnectBtn"  onclick="disconnectWifi()" style="display:none; margin-bottom:1rem;"> Disconnect From Upstream WiFi</button>
+
+
   <div id="captive" style="display:none; margin-bottom:1rem;">
-   <button id="disconnectBtn"  onclick="disconnectWifi()" style="display:none; margin-bottom:1rem;"> Disconnect</button>
-   <button onclick="openPortal()">Login to Wi-Fi</button>
+    <button onclick="openPortal()">Login to Wi-Fi</button>
   </div>
 
   <ul id="networks"></ul>
 
   <div class="hint">
-    Click a network to connect.  
+    Click a network to connect.
     Bold = currently connected.
   </div>
 

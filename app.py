@@ -90,26 +90,36 @@ def connect(
         # 0. Ensure wlan1 is managed
         run("nmcli device set wlan1 managed yes")
 
-        # 1. Hard disconnect
+        # 1. Rescan (important for travel routers)
+        run("nmcli device wifi rescan ifname wlan1 || true")
+
+        # 2. Disconnect device
         run("nmcli device disconnect wlan1 || true")
 
-        # 2. Remove stale temp connections (defensive)
-        conns = run("nmcli -t -f NAME,DEVICE connection show").splitlines()
-        for c in conns:
-            name, dev = c.split(":")
-            if dev == "wlan1" or name == "temp-wifi":
-                run(f'nmcli connection delete "{name}"')
+        # 3. Delete temp connection ONLY if it exists
+        conns = run("nmcli -t -f NAME connection show").splitlines()
+        if "temp-wifi" in conns:
+            run('nmcli connection delete temp-wifi')
 
-        # 3. Connect NON-INTERACTIVELY (KEY FIX)
+        # 4. Create temp connection (security auto-detected)
         if password:
-            out = run(
-                f'nmcli device wifi connect "{ssid}" '
-                f'password "{password}" ifname wlan1'
+            run(
+                f'nmcli connection add type wifi '
+                f'ifname wlan1 con-name temp-wifi ssid "{ssid}"'
+            )
+            run(
+                f'nmcli connection modify temp-wifi '
+                f'wifi-sec.key-mgmt wpa-psk '
+                f'wifi-sec.psk "{password}"'
             )
         else:
-            out = run(
-                f'nmcli device wifi connect "{ssid}" ifname wlan1'
+            run(
+                f'nmcli connection add type wifi '
+                f'ifname wlan1 con-name temp-wifi ssid "{ssid}"'
             )
+
+        # 5. Bring it up
+        out = run("nmcli connection up temp-wifi")
 
         return {
             "status": "ok",
@@ -121,8 +131,7 @@ def connect(
             "status": "error",
             "output": e.output
         }
-
-
+        
 # ------------------------
 # Captive Portal
 # ------------------------

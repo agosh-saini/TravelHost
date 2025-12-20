@@ -43,7 +43,31 @@ def networks(request: Request):
 
         in_use, ssid, signal, security = parts[:4]
         results.append({
-            "connected": in_use == "*",
+# ------------------------
+# API: Scan networks
+# ------------------------
+@app.get("/api/networks")
+def networks(request: Request):
+    require_token(request)
+    out = run("nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list ifname wlan1")
+    results = []
+
+    for line in out.strip().split("\n"):
+        if not line:
+            continue
+        parts = line.split(":")
+        if len(parts) < 4:
+            continue
+
+        in_use, ssid, signal, security = parts[:4]
+        results.append({
+            "connected": (in_use == "*" and run("nmcli -t -f DEVICE,STATE dev status | grep '^wlan1:' | cut -d: -f2" ).strip() == "connected"),
+            "ssid": ssid,
+            "signal": int(signal) if signal.isdigit() else 0,
+            "security": security
+        })
+
+    return results
             "ssid": ssid,
             "signal": int(signal) if signal.isdigit() else 0,
             "security": security

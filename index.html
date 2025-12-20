@@ -94,10 +94,19 @@ function refreshStatus() {
     })
     .then(s => {
       const el = document.getElementById("status");
-      if (s.ip) {
-        el.textContent = `Upstream connected via wlan1 (${s.ip})`;
+
+      if (s.device && s.ip) {
+        // Fully connected
+        el.textContent = `Connected via ${s.device} (${s.ip})`;
         el.style.background = "#064e3b";
+
+      } else if (s.device && !s.ip) {
+        // Captive portal case
+        el.textContent = `Connected via ${s.device} — login required`;
+        el.style.background = "#92400e";
+
       } else {
+        // Not connected at all
         el.textContent = "Upstream not connected";
         el.style.background = "#7c2d12";
       }
@@ -106,6 +115,7 @@ function refreshStatus() {
       document.getElementById("status").textContent = "Status unavailable";
     });
 }
+
 
 /* ==============================
  NETWORK LIST

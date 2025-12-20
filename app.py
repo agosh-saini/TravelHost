@@ -57,20 +57,32 @@ def networks(request: Request):
 @app.get("/api/status")
 def status(request: Request):
     require_token(request)
+
     try:
-        state = run("nmcli -t -f DEVICE,STATE,CONNECTION device show wlan1").strip()
-        ip = run("nmcli -t -f IP4.ADDRESS device show wlan1 | head -n1").strip()
+        # Correct way to get device state
+        state = run(
+            "nmcli -t -f DEVICE,STATE dev status | grep '^wlan1:' | cut -d: -f2"
+        ).strip()
+
+        # Correct way to extract IPv4
+        ip = run(
+            "nmcli -t -f IP4.ADDRESS dev show wlan1 | cut -d: -f2 | cut -d/ -f1"
+        ).strip()
+
         return {
             "device": "wlan1",
             "state": state,
             "ip": ip if ip else None
         }
-    except:
+
+    except Exception as e:
         return {
             "device": "wlan1",
             "state": "disconnected",
-            "ip": None
+            "ip": None,
+            "error": str(e)
         }
+
 
 # ------------------------
 # API: Connect (travel-router safe)

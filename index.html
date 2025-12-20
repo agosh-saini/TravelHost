@@ -123,12 +123,20 @@ function refreshStatus() {
 function disconnectWifi() {
   if (!confirm("Disconnect upstream Wi-Fi?")) return;
 
+  // Optimistic UI reset
+  const statusEl = document.getElementById("status");
+  const btn = document.getElementById("disconnectBtn");
+
+  statusEl.textContent = "Upstream not connected";
+  statusEl.style.background = "#7c2d12";
+  btn.style.display = "none";
+
   fetch(`/api/disconnect?token=${TOKEN}`, { method: "POST" })
     .then(() => {
       setTimeout(() => {
         refreshStatus();
         loadNetworks();
-      }, 1500);
+      }, 2000);
     });
 }
   

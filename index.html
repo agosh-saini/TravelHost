@@ -67,13 +67,14 @@
   <div id="status">Checking status…</div>
 
   <div id="captive" style="display:none; margin-bottom:1rem;">
-    <button onclick="openPortal()">Login to Wi-Fi</button>
+   <button id="disconnectBtn"  onclick="disconnectWifi()" style="display:none; margin-bottom:1rem;"> Disconnect</button>
+   <button onclick="openPortal()">Login to Wi-Fi</button>
   </div>
 
   <ul id="networks"></ul>
 
   <div class="hint">
-    Click a network to connect.
+    Click a network to connect.  
     Bold = currently connected.
   </div>
 
@@ -88,27 +89,25 @@ const TOKEN = "changeme";   // must match WIFI_UI_TOKEN
  ============================== */
 function refreshStatus() {
   fetch(`/api/status?token=${TOKEN}`)
-    .then(r => {
-      if (!r.ok) throw new Error();
-      return r.json();
-    })
+    .then(r => r.json())
     .then(s => {
       const el = document.getElementById("status");
+      const btn = document.getElementById("disconnectBtn");
 
-      if (s.device && s.ip) {
-        // Fully connected
-        el.textContent = `Connected via ${s.device} (${s.ip})`;
+      if (s.state === "connected" && s.ip) {
+        el.textContent = `Connected via wlan1 (${s.ip})`;
         el.style.background = "#064e3b";
+        btn.style.display = "inline-block";
 
-      } else if (s.device && !s.ip) {
-        // Captive portal case
-        el.textContent = `Connected via ${s.device} — login required`;
+      } else if (s.state === "connected" && !s.ip) {
+        el.textContent = "Connected via wlan1 — login required";
         el.style.background = "#92400e";
+        btn.style.display = "inline-block";
 
       } else {
-        // Not connected at all
         el.textContent = "Upstream not connected";
         el.style.background = "#7c2d12";
+        btn.style.display = "none";
       }
     })
     .catch(() => {
@@ -116,7 +115,21 @@ function refreshStatus() {
     });
 }
 
+/* ==============================
+   DISCONNECT
+   ============================== */
+function disconnectWifi() {
+  if (!confirm("Disconnect upstream Wi-Fi?")) return;
 
+  fetch(`/api/disconnect?token=${TOKEN}`, { method: "POST" })
+    .then(() => {
+      setTimeout(() => {
+        refreshStatus();
+        loadNetworks();
+      }, 1500);
+    });
+}
+  
 /* ==============================
  NETWORK LIST
  ============================== */

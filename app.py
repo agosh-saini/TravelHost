@@ -143,6 +143,19 @@ def connect(
             "status": "error",
             "output": e.output
         }
+# ------------------------
+# Disconnect
+# ------------------------
+@app.post("/api/disconnect")
+def disconnect(request: Request):
+    require_token(request)
+
+    try:
+        run("nmcli device disconnect wlan1")
+        return {"status": "ok"}
+
+    except subprocess.CalledProcessError as e:
+        return {"status": "error", "output": e.output}
         
 # ------------------------
 # Captive Portal
